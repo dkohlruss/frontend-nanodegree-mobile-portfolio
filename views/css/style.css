@@ -33,6 +33,9 @@ form {
   position: fixed;
   width: 256px;
   z-index: -1;
+/** added will-change and flexbox attributes to .mover **/
+  will-change: transform;
+  flexbox: flex;
 }
 
 .randomPizzaContainer {
