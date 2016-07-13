@@ -421,38 +421,26 @@ var resizePizzas = function(size) {
 
   changeSliderLabel(size);
 
-   // Returns the size difference to change a pizza element from one size to another. Called by changePizzaSlices(size).
-  function determineDx (elem, size) {
-    var oldWidth = elem.offsetWidth;
-    var windowWidth = document.querySelector("#randomPizzas").offsetWidth;
-    var oldSize = oldWidth / windowWidth;
-
-    // Changes the slider value to a percent width
-    function sizeSwitcher (size) {
-      switch(size) {
-        case "1":
-          return 0.25;
-        case "2":
-          return 0.3333;
-        case "3":
-          return 0.5;
-        default:
-          console.log("bug in sizeSwitcher");
-      }
-    }
-
-    var newSize = sizeSwitcher(size);
-    var dx = (newSize - oldSize) * windowWidth;
-
-    return dx;
-  }
-
   // Iterates through pizza elements on the page and changes their widths
   function changePizzaSizes(size) {
-    for (var i = 0; i < document.querySelectorAll(".randomPizzaContainer").length; i++) {
-      var dx = determineDx(document.querySelectorAll(".randomPizzaContainer")[i], size);
-      var newwidth = (document.querySelectorAll(".randomPizzaContainer")[i].offsetWidth + dx) + 'px';
-      document.querySelectorAll(".randomPizzaContainer")[i].style.width = newwidth;
+    var allPizza = document.querySelectorAll(".randomPizzaContainer");
+
+    switch(size) {
+      case "1":
+        newWidth = 25;
+        break;
+      case "2":
+        newWidth = 33.3;
+        break;
+      case "3":
+        newWidth = 50;
+        break;
+      default:
+        console.log("bug in sizeSwitcher");
+    }
+
+    for (var i = 0; i < allPizza.length; i++) {
+      allPizza[i].style.width = newWidth + "%";
     }
   }
 
@@ -468,8 +456,9 @@ var resizePizzas = function(size) {
 window.performance.mark("mark_start_generating"); // collect timing data
 
 // This for-loop actually creates and appends all of the pizzas when the page loads
+// Moved this variable declaration outside of loop
+var pizzasDiv = document.getElementById("randomPizzas");
 for (var i = 2; i < 100; i++) {
-  var pizzasDiv = document.getElementById("randomPizzas");
   pizzasDiv.appendChild(pizzaElementGenerator(i));
 }
 
@@ -501,10 +490,19 @@ function updatePositions() {
   frame++;
   window.performance.mark("mark_start_frame");
 
+  var pageTopCalc = document.body.scrollTop / 1250;
   var items = document.querySelectorAll('.mover');
+  var phases = [];
+
+// Loop to determine phase only 6 times rather than for the total number of moving pizza images
+  for (var i = 0; i < 5; i++) {
+    var phase = Math.sin(pageTopCalc + items[i].modulus);
+    phases.push(phase);
+  }
+
+// Loop modified from original main.js file -- multiplies by values for phase[0] through phase[5] based on i % 5
   for (var i = 0; i < items.length; i++) {
-    var phase = Math.sin((document.body.scrollTop / 1250) + (i % 5));
-    items[i].style.left = items[i].basicLeft + 100 * phase + 'px';
+    items[i].style.left = items[i].basicLeft + 100 * phases[i % 5] + 'px';
   }
 
   // User Timing API to the rescue again. Seriously, it's worth learning.
@@ -519,12 +517,51 @@ function updatePositions() {
 
 // runs updatePositions on scroll
 window.addEventListener('scroll', updatePositions);
+// Code from Mozilla Developer Network -- https://developer.mozilla.org/en-US/docs/Web/Events/scroll
+// Runs updatePositions after frame has been completed
+/** var last_known_scroll_position = 0;
+var ticking = false;
+
+window.addEventListener('scroll', function(e) {
+    last_known_scroll_position = window.scrollY;
+    if (!ticking) {
+        window.requestAnimationFrame(function() {
+            updatePositions();
+            ticking = false;
+        });
+    }
+    ticking = true;
+});**/
+
+
+
 
 // Generates the sliding pizzas when the page loads.
 document.addEventListener('DOMContentLoaded', function() {
+  // Determine window dimensions to modify number of pizzas generated
+  var winHeight = window.innerHeight;
+  var winWidth = window.innerWidth;
+  var pizzaCount;
+
   var cols = 8;
   var s = 256;
-  for (var i = 0; i < 200; i++) {
+
+// Switch hack taken from stackoverflow: http://stackoverflow.com/questions/5619832/switch-on-ranges-of-integers-in-javascript
+  switch(true) {
+    case (winHeight < 481):
+      alert("tiny");
+      pizzaCount = 16;
+      break;
+    case (winHeight < 721):
+      alert("med");
+      pizzaCount = 25;
+      break;
+    default:
+      pizzaCount = 30;
+      break;
+  }
+
+  for (var i = 0; i < pizzaCount; i++) {
     var elem = document.createElement('img');
     elem.className = 'mover';
     elem.src = "images/pizza.png";
@@ -532,7 +569,13 @@ document.addEventListener('DOMContentLoaded', function() {
     elem.style.width = "73.333px";
     elem.basicLeft = (i % cols) * s;
     elem.style.top = (Math.floor(i / cols) * s) + 'px';
+    // Modulus property added to iterate over all 6 possible phases in updatePositions
+    elem.modulus = i % 5;
+
+
+
     document.querySelector("#movingPizzas1").appendChild(elem);
   }
+
   updatePositions();
 });
